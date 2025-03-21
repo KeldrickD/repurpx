@@ -1,6 +1,6 @@
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { PrismaClient } from "@prisma/client"
-import NextAuth from "next-auth"
+import NextAuth from "next-auth/next"
 import EmailProvider from "next-auth/providers/email"
 
 const prisma = new PrismaClient()
@@ -21,7 +21,7 @@ const handler = NextAuth({
     }),
   ],
   callbacks: {
-    session: async ({ session, user }) => {
+    session: async ({ session, user }: { session: any; user: any }) => {
       if (session?.user) {
         session.user.id = user.id
       }
