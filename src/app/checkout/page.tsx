@@ -3,11 +3,11 @@ import { getServerSession } from 'next-auth/next'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
-export default async function CheckoutPage({
-  searchParams,
-}: {
+type Props = {
   searchParams: { [key: string]: string | string[] | undefined }
-}) {
+}
+
+export default async function CheckoutPage({ searchParams }: Props) {
   const session = await getServerSession()
   if (!session?.user) {
     redirect('/signin')
