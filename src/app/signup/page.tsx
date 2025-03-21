@@ -1,10 +1,8 @@
 import { SignUpForm } from '@/components/SignUpForm'
 
-export default function SignUpPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined }
-}) {
+// @ts-expect-error - NextJS page component types
+export default function SignUpPage(props) {
+  const { searchParams } = props
   const plan = searchParams.plan as string | undefined
 
   return (
