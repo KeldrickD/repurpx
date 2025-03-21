@@ -30,7 +30,7 @@ export function SignUpForm({ selectedPlan }: SignUpFormProps) {
       } else {
         setSuccess(true)
       }
-    } catch (error) {
+    } catch (_error) {
       setError('An unexpected error occurred.')
     } finally {
       setIsLoading(false)

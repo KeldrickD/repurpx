@@ -1,9 +1,17 @@
-import { Content } from '@prisma/client'
+interface Content {
+  id: string
+  title: string
+  originalContent: string
+  transformedContent: Record<string, string | number | boolean | null | object> | null
+  contentType: string
+  status: string
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+}
 
 interface ContentListProps {
-  contents: (Content & {
-    transformedContent: Record<string, any> | null
-  })[]
+  contents: Content[]
 }
 
 export function ContentList({ contents }: ContentListProps) {

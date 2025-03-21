@@ -72,7 +72,7 @@ export default async function DashboardPage() {
               <div className="px-4 sm:px-6">
                 <h2 className="text-lg font-medium leading-6 text-gray-900">Your Content</h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  Upload your content and we'll transform it for different platforms.
+                  Upload your content and we&apos;ll transform it for different platforms.
                 </p>
               </div>
 
