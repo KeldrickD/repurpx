@@ -3,15 +3,9 @@ import { getServerSession } from 'next-auth/next'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
-// We need to include params for Next.js App Router typing, even though we don't use it
-export default async function CheckoutPage({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  params,
-  searchParams,
-}: {
-  params: Record<string, never>
-  searchParams: { [key: string]: string | string[] | undefined }
-}) {
+// @ts-ignore - NextJS page component types
+export default async function CheckoutPage(props) {
+  const { searchParams } = props
   const session = await getServerSession()
   if (!session?.user) {
     redirect('/signin')
