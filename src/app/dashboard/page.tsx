@@ -81,7 +81,6 @@ export default async function DashboardPage() {
               </div>
 
               <div className="mt-8 px-4 sm:px-6">
-                {/* @ts-expect-error - Type mismatch between Prisma's JsonValue and our custom JsonValue */}
                 <ContentList contents={user.contents} />
               </div>
             </div>
