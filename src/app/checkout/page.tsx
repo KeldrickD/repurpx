@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
-// @ts-ignore - NextJS page component types
+// @ts-expect-error - NextJS page component types
 export default async function CheckoutPage(props) {
   const { searchParams } = props
   const session = await getServerSession()
