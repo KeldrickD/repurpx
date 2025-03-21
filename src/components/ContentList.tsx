@@ -1,4 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Define JsonValue type to match Prisma's JSON representation
 type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
 
 interface Content {
@@ -87,6 +87,7 @@ export function ContentList({ contents }: ContentListProps) {
                       </div>
                     </summary>
                     <div className="mt-4 space-y-4">
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       {Object.entries(content.transformedContent as Record<string, any>).map(([platform, text]) => (
                         <div key={platform} className="rounded-md bg-gray-50 p-4">
                           <h4 className="text-sm font-medium text-gray-900 capitalize mb-2">
