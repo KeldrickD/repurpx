@@ -1,8 +1,11 @@
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
+
 interface Content {
   id: string
   title: string
   originalContent: string
-  transformedContent: Record<string, string | number | boolean | null | object> | null
+  transformedContent: JsonValue | null
   contentType: string
   status: string
   userId: string
@@ -84,12 +87,12 @@ export function ContentList({ contents }: ContentListProps) {
                       </div>
                     </summary>
                     <div className="mt-4 space-y-4">
-                      {Object.entries(content.transformedContent).map(([platform, text]) => (
+                      {Object.entries(content.transformedContent as Record<string, any>).map(([platform, text]) => (
                         <div key={platform} className="rounded-md bg-gray-50 p-4">
                           <h4 className="text-sm font-medium text-gray-900 capitalize mb-2">
                             {platform}
                           </h4>
-                          <p className="text-sm text-gray-500 whitespace-pre-wrap">{text as string}</p>
+                          <p className="text-sm text-gray-500 whitespace-pre-wrap">{String(text)}</p>
                         </div>
                       ))}
                     </div>
