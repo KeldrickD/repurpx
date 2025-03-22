@@ -12,20 +12,22 @@ if (!process.env.EMAIL_SERVER_USER) console.log("EMAIL_SERVER_USER missing")
 if (!process.env.EMAIL_SERVER_PASSWORD) console.log("EMAIL_SERVER_PASSWORD missing")
 if (!process.env.EMAIL_FROM) console.log("EMAIL_FROM missing")
 
+// Add more debugging info
+console.log("Using email config:", {
+  host: process.env.EMAIL_SERVER_HOST,
+  port: process.env.EMAIL_SERVER_PORT,
+  user: process.env.EMAIL_SERVER_USER ? 'Set' : 'Not set',
+  pass: process.env.EMAIL_SERVER_PASSWORD ? 'Set' : 'Not set',
+  from: process.env.EMAIL_FROM
+})
+
 const handler = NextAuth({
   adapter: PrismaAdapter(prisma),
-  debug: process.env.NODE_ENV !== "production", // Enable debug in development
+  debug: true, // Always enable debugging to diagnose the issue
   providers: [
     EmailProvider({
-      server: {
-        host: process.env.EMAIL_SERVER_HOST,
-        port: Number(process.env.EMAIL_SERVER_PORT), // Convert to number
-        auth: {
-          user: process.env.EMAIL_SERVER_USER,
-          pass: process.env.EMAIL_SERVER_PASSWORD,
-        },
-        secure: process.env.EMAIL_SERVER_PORT === "465", // Use SSL for port 465
-      },
+      // Using simpler string URL format for SMTP configuration
+      server: `smtp://${process.env.EMAIL_SERVER_USER}:${encodeURIComponent(process.env.EMAIL_SERVER_PASSWORD || '')}@${process.env.EMAIL_SERVER_HOST}:${process.env.EMAIL_SERVER_PORT}`,
       from: process.env.EMAIL_FROM,
       maxAge: 24 * 60 * 60, // 1 day
     }),
