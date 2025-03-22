@@ -2,32 +2,62 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import { PrismaClient } from "@prisma/client"
 import NextAuth from "next-auth/next"
 import EmailProvider from "next-auth/providers/email"
+import { createTransport } from "nodemailer"
 
 const prisma = new PrismaClient()
 
 // For debugging purposes - shows in Vercel logs
-if (!process.env.EMAIL_SERVER_HOST) console.log("EMAIL_SERVER_HOST missing")
-if (!process.env.EMAIL_SERVER_PORT) console.log("EMAIL_SERVER_PORT missing")
-if (!process.env.EMAIL_SERVER_USER) console.log("EMAIL_SERVER_USER missing")
-if (!process.env.EMAIL_SERVER_PASSWORD) console.log("EMAIL_SERVER_PASSWORD missing")
-if (!process.env.EMAIL_FROM) console.log("EMAIL_FROM missing")
-
-// Add more debugging info
-console.log("Using email config:", {
-  host: process.env.EMAIL_SERVER_HOST,
-  port: process.env.EMAIL_SERVER_PORT,
-  user: process.env.EMAIL_SERVER_USER ? 'Set' : 'Not set',
-  pass: process.env.EMAIL_SERVER_PASSWORD ? 'Set' : 'Not set',
-  from: process.env.EMAIL_FROM
+console.log("NextAuth initializing with these environment variables set:", {
+  NEXTAUTH_URL: !!process.env.NEXTAUTH_URL,
+  NEXTAUTH_SECRET: !!process.env.NEXTAUTH_SECRET,
+  EMAIL_SERVER_HOST: !!process.env.EMAIL_SERVER_HOST,
+  EMAIL_SERVER_PORT: !!process.env.EMAIL_SERVER_PORT,
+  EMAIL_SERVER_USER: !!process.env.EMAIL_SERVER_USER,
+  EMAIL_SERVER_PASSWORD: !!process.env.EMAIL_SERVER_PASSWORD,
+  EMAIL_FROM: !!process.env.EMAIL_FROM,
+  DATABASE_URL: !!process.env.DATABASE_URL
 })
+
+// Create transporter outside the provider to test it directly
+let transporter = null;
+try {
+  transporter = createTransport({
+    host: process.env.EMAIL_SERVER_HOST,
+    port: Number(process.env.EMAIL_SERVER_PORT || "587"),
+    secure: process.env.EMAIL_SERVER_PORT === "465",
+    auth: {
+      user: process.env.EMAIL_SERVER_USER,
+      pass: process.env.EMAIL_SERVER_PASSWORD
+    }
+  });
+  
+  // Verify connection configuration
+  transporter.verify(function (error, success) {
+    if (error) {
+      console.log("SMTP Server connection error:", error);
+    } else {
+      console.log("SMTP Server connection verified successfully");
+    }
+  });
+} catch (error) {
+  console.error("Failed to create email transporter:", error);
+}
 
 const handler = NextAuth({
   adapter: PrismaAdapter(prisma),
   debug: true, // Always enable debugging to diagnose the issue
   providers: [
     EmailProvider({
-      // Using simpler string URL format for SMTP configuration
-      server: `smtp://${process.env.EMAIL_SERVER_USER}:${encodeURIComponent(process.env.EMAIL_SERVER_PASSWORD || '')}@${process.env.EMAIL_SERVER_HOST}:${process.env.EMAIL_SERVER_PORT}`,
+      // Use the pre-tested transporter if available
+      server: transporter || {
+        host: process.env.EMAIL_SERVER_HOST,
+        port: Number(process.env.EMAIL_SERVER_PORT || "587"),
+        secure: process.env.EMAIL_SERVER_PORT === "465",
+        auth: {
+          user: process.env.EMAIL_SERVER_USER,
+          pass: process.env.EMAIL_SERVER_PASSWORD
+        }
+      },
       from: process.env.EMAIL_FROM,
       maxAge: 24 * 60 * 60, // 1 day
     }),
