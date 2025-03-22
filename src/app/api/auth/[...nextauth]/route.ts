@@ -1,10 +1,9 @@
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import { PrismaClient } from "@prisma/client"
 import NextAuth from "next-auth/next"
 import EmailProvider from "next-auth/providers/email"
 import { createTransport } from "nodemailer"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma" // Use the shared Prisma instance
+import { NextResponse } from "next/server"
 
 // For debugging purposes - shows in Vercel logs
 console.log("NextAuth initializing with these environment variables set:", {
@@ -43,7 +42,21 @@ try {
   console.error("Failed to create email transporter:", error);
 }
 
-const handler = NextAuth({
+// Test database connection
+try {
+  // Simple query to test the database connection
+  prisma.$queryRaw`SELECT 1+1 AS result`.then(() => {
+    console.log('Database connection verified successfully');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }).catch((err: any) => {
+    console.error('Database connection error:', err);
+  });
+} catch (error) {
+  console.error('Error testing database connection:', error);
+}
+
+// Create the NextAuth handler with error handling
+const authHandler = NextAuth({
   adapter: PrismaAdapter(prisma),
   debug: true, // Always enable debugging to diagnose the issue
   providers: [
@@ -72,9 +85,38 @@ const handler = NextAuth({
     },
   },
   pages: {
-    signIn: '/signin', // Custom sign-in page (if you have one)
+    signIn: '/signin', // Custom sign-in page
     error: '/auth/error', // Error page
   },
 })
 
-export { handler as GET, handler as POST } 
+// Wrap the handler in a try-catch to properly handle errors
+export async function GET(req: Request) {
+  try {
+    return await authHandler(req);
+  } catch (error) {
+    console.error('NextAuth GET handler error:', error);
+    return new NextResponse(
+      JSON.stringify({ 
+        error: 'Internal Server Error',
+        message: 'An error occurred during authentication'
+      }),
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    return await authHandler(req);
+  } catch (error) {
+    console.error('NextAuth POST handler error:', error);
+    return new NextResponse(
+      JSON.stringify({ 
+        error: 'Internal Server Error',
+        message: 'An error occurred during authentication'
+      }),
+      { status: 500 }
+    );
+  }
+} 
