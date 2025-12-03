@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
@@ -107,7 +107,7 @@ export default function SegmentsPage() {
     };
   }, []);
 
-  const segments = data?.segments ?? [];
+  const segments = useMemo(() => data?.segments ?? [], [data?.segments]);
   const selectedSegment =
     segments.find((segment) => segment.key === selectedKey) ?? segments[0];
 

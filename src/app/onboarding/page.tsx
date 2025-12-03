@@ -578,7 +578,7 @@ function FirstCampaignStep({
     role: AccountRole;
   } | null>(null);
 
-  const quickTemplates = getQuickTemplatesForRole(primary as any);
+  const quickTemplates = getQuickTemplatesForRole(primary);
 
   useEffect(() => {
     setChannel(CHANNEL_OPTIONS[primary][0]);
