@@ -4,11 +4,14 @@ Transform your content into multiple formats for different social media platform
 
 ## Features
 
-- Transform blogs, videos, and podcasts into social media content
-- AI-powered content adaptation for different platforms
-- Support for Twitter, LinkedIn, and Instagram
-- Real-time content transformation
-- Subscription-based pricing model
+- Fan CRM with automatic whale/new/ghost segmentation
+- Message template library with personalization tokens
+- Campaign composer with AI rewrite helpers
+- Telegram broadcast automation per segment
+- Dancer CRM to track real-world regulars and whales
+- Club CRM for VIP patrons, spend, and visits
+- SMS broadcast rail (Twilio) for dancers & clubs
+- Waitlist and authentication flows
 - Modern, responsive UI
 
 ## Tech Stack
@@ -53,6 +56,14 @@ Transform your content into multiple formats for different social media platform
 
    # Database
    DATABASE_URL="postgresql://user:password@localhost:5432/content_transformer"
+
+   # Messaging
+   TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+
+   # SMS (Twilio)
+   TWILIO_ACCOUNT_SID=your-twilio-account-sid
+   TWILIO_AUTH_TOKEN=your-twilio-auth-token
+   TWILIO_FROM_NUMBER=+10000000000
 
    # Email (for authentication)
    EMAIL_SERVER_HOST=your-smtp-host
