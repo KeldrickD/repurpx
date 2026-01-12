@@ -3,8 +3,293 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                     String           @id @default(cuid())
+  email                  String           @unique
+  name                   String?
+  passwordHash           String?
+  role                   String?          @default("creator")
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  primaryRole            AccountRole?
+  roles                  AccountRole[]    @default([])
+  hasCompletedOnboarding Boolean          @default(false)
+  accounts               Account[]
+  campaigns              Campaign[]
+  creatorAccounts        CreatorAccount[]
+  events                 Event[]
+  sessions               Session[]
+  subscription           Subscription?
+  templates              Template[]
+}
+
+model CreatorAccount {
+  id                   String            @id @default(cuid())
+  userId               String
+  platform             CreatorPlatform   @default(ONLYFANS)
+  platformUserId       String
+  displayName          String?
+  avatarUrl            String?
+  accessToken          String?
+  refreshToken         String?
+  connectedAt          DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  billingPlan          BillingPlan       @default(FREE)
+  monthlySmsLimit      Int               @default(0)
+  smsPeriodStart       DateTime?
+  smsUsedThisPeriod    Int               @default(0)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  campaigns            Campaign[]
+  clubPatrons          ClubPatron[]
+  user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dancerCustomers      DancerCustomer[]
+  events               Event[]
+  fans                 Fan[]
+  outboundSms          OutboundSms[]
+  smsNumber            SmsNumber?
+  telegramChannels     TelegramChannel[]
+  templates            Template[]
+
+  @@unique([userId, platform, platformUserId])
+}
+
+model Fan {
+  id                 String              @id @default(cuid())
+  creatorAccountId   String
+  platformFanId      String
+  username           String
+  displayName        String?
+  joinedAt           DateTime?
+  lifetimeSpend      Decimal             @default(0)
+  lastTipAmount      Decimal?
+  lastMessageAt      DateTime?
+  rebillDate         DateTime?
+  segment            FanSegment          @default(LOW)
+  tags               String[]
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  campaignRecipients CampaignRecipient[]
+  creatorAccount     CreatorAccount      @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorAccountId, platformFanId])
+}
+
+model Campaign {
+  id               String              @id @default(cuid())
+  creatorAccountId String
+  userId           String?
+  name             String
+  segmentFilter    Json
+  messageBody      String
+  status           CampaignStatus      @default(draft)
+  sendAt           DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  creatorAccount   CreatorAccount      @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
+  user             User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipients       CampaignRecipient[]
+}
+
+model CampaignRecipient {
+  id           String          @id @default(cuid())
+  campaignId   String
+  fanId        String
+  status       RecipientStatus @default(pending)
+  sentAt       DateTime?
+  errorMessage String?
+  createdAt    DateTime        @default(now())
+  campaign     Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  fan          Fan             @relation(fields: [fanId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([fanId])
+}
+
+model Template {
+  id               String            @id @default(cuid())
+  creatorAccountId String?
+  userId           String?
+  name             String
+  category         TemplateCategory?
+  segment          FanSegment?
+  body             String
+  isDefault        Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  creatorAccount   CreatorAccount?   @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
+  user             User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorAccountId, name])
+}
+
+model TelegramChannel {
+  id               String              @id @default(cuid())
+  creatorAccountId String
+  segment          FanSegment?
+  chatId           String
+  title            String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  dancerTier       DancerCustomerTier?
+  kind             TelegramChannelKind @default(CREATOR_SEGMENT)
+  creatorAccount   CreatorAccount      @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
+
+  @@index([creatorAccountId, kind])
+  @@index([creatorAccountId, kind, segment])
+  @@index([creatorAccountId, kind, dancerTier])
+}
+
+model DancerCustomer {
+  id               String             @id @default(cuid())
+  creatorAccountId String
+  displayName      String
+  phone            String?
+  telegramHandle   String?
+  instagramHandle  String?
+  totalSpendCents  Int                @default(0)
+  lastVisitAt      DateTime?
+  lastContactAt    DateTime?
+  visitsCount      Int                @default(0)
+  favoriteNights   String?
+  tier             DancerCustomerTier @default(REGULAR)
+  notes            String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  creatorAccount   CreatorAccount     @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
+
+  @@index([creatorAccountId])
+}
+
+model ClubPatron {
+  id               String         @id @default(cuid())
+  creatorAccountId String
+  displayName      String
+  phone            String?
+  email            String?
+  telegramHandle   String?
+  instagramHandle  String?
+  vipStatus        ClubVipStatus  @default(NONE)
+  birthday         DateTime?
+  preferredNights  String?
+  preferredDancer  String?
+  totalSpendCents  Int            @default(0)
+  lastVisitAt      DateTime?
+  visitsCount      Int            @default(0)
+  lastTableAt      DateTime?
+  tablesCount      Int            @default(0)
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  creatorAccount   CreatorAccount @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
+
+  @@index([creatorAccountId])
+}
+
+model OutboundSms {
+  id               String          @id @default(cuid())
+  creatorAccountId String
+  audienceType     SmsAudienceType
+  audienceKey      String
+  targetType       SmsTargetType
+  targetId         String?
+  body             String
+  toCount          Int             @default(0)
+  successCount     Int             @default(0)
+  failedCount      Int             @default(0)
+  provider         String?
+  providerBatchId  String?
+  errorSummary     String?
+  createdAt        DateTime        @default(now())
+  sentAt           DateTime?
+  updatedAt        DateTime        @updatedAt
+  creatorAccount   CreatorAccount  @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
+
+  @@index([creatorAccountId, audienceType])
+}
+
+model SmsNumber {
+  id               String         @id @default(cuid())
+  creatorAccountId String         @unique
+  phoneNumber      String
+  providerSid      String?
+  createdAt        DateTime       @default(now())
+  releasedAt       DateTime?
+  creatorAccount   CreatorAccount @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  plan                 SubscriptionPlan
+  status               SubscriptionStatus @default(active)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  source    String?
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id               String          @id @default(cuid())
+  userId           String?
+  creatorAccountId String?
+  type             EventType
+  metadata         Json?
+  createdAt        DateTime        @default(now())
+  creatorAccount   CreatorAccount? @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
+  user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum CreatorPlatform {
@@ -65,12 +350,14 @@ enum AccountRole {
   DANCER
   CLUB
 }
+
 enum BillingPlan {
   FREE
   STARTER
   GROWTH
   CLUB
 }
+
 enum SmsAudienceType {
   DANCER_TIER
   CLUB_VIP
@@ -103,288 +390,3 @@ enum TelegramChannelKind {
   CREATOR_SEGMENT
   DANCER_TIER
 }
-
-model User {
-  id              String             @id @default(cuid())
-  email           String             @unique
-  name            String?
-  passwordHash    String?
-  role            String?            @default("creator")
-  roles           AccountRole[]      @default([])
-  primaryRole     AccountRole?
-  hasCompletedOnboarding Boolean     @default(false)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  creatorAccounts CreatorAccount[]
-  templates       Template[]
-  campaigns       Campaign[]
-  subscription    Subscription?
-  events          Event[]
-  accounts        Account[]
-  sessions        Session[]
-}
-
-model CreatorAccount {
-  id             String             @id @default(cuid())
-  userId         String
-  platform       CreatorPlatform    @default(ONLYFANS)
-  platformUserId String
-  displayName    String?
-  avatarUrl      String?
-  accessToken    String?
-  refreshToken   String?
-  connectedAt    DateTime?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  billingPlan          BillingPlan   @default(FREE)
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
-  monthlySmsLimit      Int           @default(0)
-  smsUsedThisPeriod    Int           @default(0)
-  smsPeriodStart       DateTime?
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fans           Fan[]
-  campaigns      Campaign[]
-  templates      Template[]
-  events         Event[]
-  telegramChannels TelegramChannel[]
-  dancerCustomers DancerCustomer[]
-  clubPatrons    ClubPatron[]
-  outboundSms    OutboundSms[]
-  smsNumber      SmsNumber?
-
-  @@unique([userId, platform, platformUserId])
-}
-
-model Fan {
-  id               String         @id @default(cuid())
-  creatorAccountId String
-  platformFanId    String
-  username         String
-  displayName      String?
-  joinedAt         DateTime?
-  lifetimeSpend    Decimal        @default(0)
-  lastTipAmount    Decimal?
-  lastMessageAt    DateTime?
-  rebillDate       DateTime?
-  segment          FanSegment     @default(LOW)
-  tags             String[]
-  notes            String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  creatorAccount   CreatorAccount @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
-  campaignRecipients CampaignRecipient[]
-
-  @@unique([creatorAccountId, platformFanId])
-}
-
-model Campaign {
-  id              String          @id @default(cuid())
-  creatorAccountId String
-  userId          String?
-  name            String
-  segmentFilter   Json
-  messageBody     String
-  status          CampaignStatus  @default(draft)
-  sendAt          DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  creatorAccount  CreatorAccount  @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
-  user            User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipients      CampaignRecipient[]
-}
-
-model CampaignRecipient {
-  id         String           @id @default(cuid())
-  campaignId String
-  fanId      String
-  status     RecipientStatus  @default(pending)
-  sentAt     DateTime?
-  errorMessage String?
-  createdAt  DateTime         @default(now())
-  campaign   Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  fan        Fan              @relation(fields: [fanId], references: [id], onDelete: Cascade)
-
-  @@index([campaignId])
-  @@index([fanId])
-}
-
-model Template {
-  id               String             @id @default(cuid())
-  creatorAccountId String?
-  userId           String?
-  name             String
-  category         TemplateCategory?
-  segment          FanSegment?
-  body             String
-  isDefault        Boolean            @default(false)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  creatorAccount   CreatorAccount?    @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
-  user             User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([creatorAccountId, name])
-}
-
-model TelegramChannel {
-  id               String         @id @default(cuid())
-  creatorAccountId String
-  kind             TelegramChannelKind @default(CREATOR_SEGMENT)
-  segment          FanSegment?
-  dancerTier       DancerCustomerTier?
-  chatId           String
-  title            String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  creatorAccount   CreatorAccount @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
-
-  @@index([creatorAccountId, kind])
-  @@index([creatorAccountId, kind, segment])
-  @@index([creatorAccountId, kind, dancerTier])
-}
-
-model DancerCustomer {
-  id               String             @id @default(cuid())
-  creatorAccountId String
-  displayName      String
-  phone            String?
-  telegramHandle   String?
-  instagramHandle  String?
-  totalSpendCents  Int                @default(0)
-  lastVisitAt      DateTime?
-  lastContactAt    DateTime?
-  visitsCount      Int                @default(0)
-  favoriteNights   String?
-  tier             DancerCustomerTier @default(REGULAR)
-  notes            String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  creatorAccount   CreatorAccount     @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
-
-  @@index([creatorAccountId])
-}
-
-model ClubPatron {
-  id               String         @id @default(cuid())
-  creatorAccountId String
-  displayName      String
-  phone            String?
-  email            String?
-  telegramHandle   String?
-  instagramHandle  String?
-  vipStatus        ClubVipStatus  @default(NONE)
-  birthday         DateTime?
-  preferredNights  String?
-  preferredDancer  String?
-  totalSpendCents  Int            @default(0)
-  lastVisitAt      DateTime?
-  visitsCount      Int            @default(0)
-  lastTableAt      DateTime?
-  tablesCount      Int            @default(0)
-  notes            String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  creatorAccount   CreatorAccount @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
-
-  @@index([creatorAccountId])
-}
-
-model OutboundSms {
-  id               String         @id @default(cuid())
-  creatorAccountId String
-  audienceType     SmsAudienceType
-  audienceKey      String
-  targetType       SmsTargetType
-  targetId         String?
-  body             String
-  toCount          Int            @default(0)
-  successCount     Int            @default(0)
-  failedCount      Int            @default(0)
-  provider         String?
-  providerBatchId  String?
-  errorSummary     String?
-  createdAt        DateTime       @default(now())
-  sentAt           DateTime?
-  updatedAt        DateTime       @updatedAt
-  creatorAccount   CreatorAccount @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
-
-  @@index([creatorAccountId, audienceType])
-}
-
-model SmsNumber {
-  id               String         @id @default(cuid())
-  creatorAccountId String         @unique
-  phoneNumber      String
-  providerSid      String?
-  createdAt        DateTime       @default(now())
-  releasedAt       DateTime?
-  creatorAccount   CreatorAccount @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-model Subscription {
-  id                  String             @id @default(cuid())
-  userId              String             @unique
-  plan                SubscriptionPlan
-  status              SubscriptionStatus @default(active)
-  stripeCustomerId    String?
-  stripeSubscriptionId String?
-  stripePriceId       String?
-  currentPeriodEnd    DateTime?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model WaitlistEntry {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  source    String?
-  notes     String?
-  createdAt DateTime @default(now())
-}
-
-model Event {
-  id               String             @id @default(cuid())
-  userId           String?
-  creatorAccountId String?
-  type             EventType
-  metadata         Json?
-  createdAt        DateTime           @default(now())
-  user             User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  creatorAccount   CreatorAccount?    @relation(fields: [creatorAccountId], references: [id], onDelete: Cascade)
-}
-
