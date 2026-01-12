@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import { AccountRole, CreatorPlatform, SubscriptionPlan } from "@prisma/client";
+import { AccountRole, CreatorPlatform, SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const BodySchema = z.object({
@@ -30,8 +30,12 @@ const ROLE_LABEL: Record<AccountRole, string> = {
 
 export async function POST(req: Request) {
   try {
-    const parsed = BodySchema.safeParse(await req.json());
+    const body = await req.json();
+    console.log("Signup request body:", JSON.stringify(body, null, 2));
+
+    const parsed = BodySchema.safeParse(body);
     if (!parsed.success) {
+      console.log("Signup validation error:", JSON.stringify(parsed.error.flatten(), null, 2));
       return NextResponse.json(
         { error: "Invalid signup data", details: parsed.error.flatten() },
         { status: 400 },
@@ -67,11 +71,11 @@ export async function POST(req: Request) {
         primaryRole,
         subscription: plan
           ? {
-              create: {
-                plan: normalizedPlan ?? SubscriptionPlan.STARTER,
-                status: "active",
-              },
-            }
+            create: {
+              plan: normalizedPlan ?? SubscriptionPlan.STARTER,
+              status: SubscriptionStatus.active,
+            },
+          }
           : undefined,
       },
     });
@@ -94,7 +98,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Signup error", error);
-    return NextResponse.json({ error: "Unable to create account." }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    // Temporarily showing error details in production for debugging
+    return NextResponse.json(
+      {
+        error: `Unable to create account: ${errorMessage}`
+      },
+      { status: 500 }
+    );
   }
 }
 
