@@ -7,7 +7,7 @@ import { WaitlistForm } from "@/components/WaitlistForm";
 const AUDIENCE_SECTIONS = [
   {
     title: "OnlyFans / online creators",
-    description: "Auto-segment whales, expiring subs, and ghosts so every DM hits harder.",
+    description: "Turn your fan list into a revenue engine. Auto-segment whales, new subs, and ghosts.",
     bullets: [
       "One-click campaigns with personalization tokens",
       "Telegram + SMS follow-ups that feel manual",
@@ -16,7 +16,7 @@ const AUDIENCE_SECTIONS = [
   },
   {
     title: "Dancers & entertainers",
-    description: "Log every whale, keep VIP tiers warm, and text your best spenders before every shift.",
+    description: "Keep your regulars warm. Log every whale and text your best spenders before every shift.",
     bullets: [
       "VIP CRM with spend, visits, and notes",
       "At-risk / cold alerts + 30-day inactivity flags",
@@ -25,7 +25,7 @@ const AUDIENCE_SECTIONS = [
   },
   {
     title: "Strip clubs & venues",
-    description: "Bring VIPs back with one dashboard for bottle buyers, birthdays, and event promos.",
+    description: "A VIP program that runs itself. Bring VIPs back with bottle buyers, birthdays, and event promos.",
     bullets: [
       "At-risk and cold segmentation automatically",
       "Birthday week + bottle service templates",
@@ -121,9 +121,9 @@ export default function Home() {
               Built for creators. Not agencies.
             </div>
             <h1 className="font-heading text-5xl font-bold leading-[1.1] lg:text-6xl">
-              Control your content.
+              Your fan list is a goldmine.
               <br />
-              <span className="text-gradient">Automate the rest.</span>
+              <span className="text-gradient">We help you tap it.</span>
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-silver">
               RepurpX is the control center for creators, dancers, and clubs. Segment

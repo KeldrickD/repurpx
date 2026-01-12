@@ -49,13 +49,13 @@ const PLAN_DETAILS: {
   {
     plan: "CLUB",
     label: "Club",
-    priceLabel: "$499/mo",
+    priceLabel: "$199/mo",
     description: "For clubs running VIP programs and bottle service.",
     features: [
-      "10,000 SMS credits / mo",
+      "2,000 SMS credits / mo",
       "Club CRM + VIP analytics",
       "Multi-location support",
-      "Dedicated success manager",
+      "Priority support",
     ],
   },
 ];

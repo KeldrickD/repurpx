@@ -14,8 +14,8 @@ const BodySchema = z.object({
 const PLAN_TO_PRICE_ID: Record<BillingPlan, string | null> = {
   FREE: null,
   STARTER: process.env.STRIPE_PRICE_STARTER ?? null,
-  GROWTH: process.env.STRIPE_PRICE_GROWTH ?? null,
-  CLUB: process.env.STRIPE_PRICE_CLUB ?? null,
+  GROWTH: process.env.STRIPE_PRICE_STARTER_GROWTH ?? null,
+  CLUB: process.env.STRIPE_PRICE_STARTER_CLUB ?? null,
 };
 
 export async function POST(req: NextRequest) {

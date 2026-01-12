@@ -226,7 +226,7 @@ function getContentForRole(
     primaryCtaAction: () => router.push("/dashboard/segments"),
     secondaryCtaLabel: "Create win-back campaign",
     secondaryCtaAction: () =>
-      router.push("/dashboard/campaigns/new?segment=GHOST"),
+      router.push("/dashboard/campaigns/new?segment=GHOSTS"),
   };
 }
 
