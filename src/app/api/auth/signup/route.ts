@@ -99,10 +99,16 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Signup error", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    // Temporarily showing error details in production for debugging
+
+    // Debug info: which host is the app seeing?
+    const dbUrl = process.env.DATABASE_URL || "";
+    const dbParts = dbUrl.split("@")[1] || "";
+    const dbHost = dbParts.split(":")[0] || "unknown";
+    const dbPort = dbParts.split(":")[1]?.split("/")[0] || "unknown";
+
     return NextResponse.json(
       {
-        error: `Unable to create account: ${errorMessage}`
+        error: `Unable to create account: ${errorMessage} (Host: ${dbHost}, Port: ${dbPort})`
       },
       { status: 500 }
     );
