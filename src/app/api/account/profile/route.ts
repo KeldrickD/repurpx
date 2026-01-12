@@ -27,6 +27,12 @@ export async function GET() {
         select: {
           id: true,
           platform: true,
+          telegramChannels: {
+            select: { id: true },
+          },
+          smsNumber: {
+            select: { id: true, releasedAt: true },
+          },
         },
       },
     },

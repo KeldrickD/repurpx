@@ -10,6 +10,8 @@ type CreatorPlatform = "ONLYFANS" | "DANCER" | "CLUB";
 type CreatorAccountSummary = {
   id: string;
   platform: CreatorPlatform;
+  telegramChannels?: { id: string }[];
+  smsNumber?: { id: string; releasedAt: string | null } | null;
 };
 
 type Profile = {
@@ -54,22 +56,22 @@ const ROLE_OPTIONS: {
   label: string;
   description: string;
 }[] = [
-  {
-    id: "CREATOR",
-    label: "Online creator / OnlyFans",
-    description: "Segment fans, send DM campaigns, and reuse AI templates.",
-  },
-  {
-    id: "DANCER",
-    label: "Dancer / entertainer",
-    description: "Track whales, text VIPs, and keep regulars warm.",
-  },
-  {
-    id: "CLUB",
-    label: "Club / venue",
-    description: "Manage VIP patrons, birthdays, and bottle buyers.",
-  },
-];
+    {
+      id: "CREATOR",
+      label: "Online creator / OnlyFans",
+      description: "Segment fans, send DM campaigns, and reuse AI templates.",
+    },
+    {
+      id: "DANCER",
+      label: "Dancer / entertainer",
+      description: "Track whales, text VIPs, and keep regulars warm.",
+    },
+    {
+      id: "CLUB",
+      label: "Club / venue",
+      description: "Manage VIP patrons, birthdays, and bottle buyers.",
+    },
+  ];
 
 const CHANNEL_OPTIONS: Record<AccountRole, ("SMS" | "TELEGRAM")[]> = {
   CREATOR: ["TELEGRAM"],
@@ -211,6 +213,7 @@ export default function OnboardingPage() {
               profile={profile}
               accountIds={accountIds}
               onBack={goBack}
+              onProfileRefresh={loadProfile}
               onDone={async () => {
                 await fetch("/api/account/onboarding", {
                   method: "POST",
@@ -556,13 +559,16 @@ function FirstCampaignStep({
   profile,
   accountIds,
   onBack,
+  onProfileRefresh,
   onDone,
 }: {
   profile: Profile;
   accountIds: Partial<Record<AccountRole, string | null>>;
   onBack: () => void;
+  onProfileRefresh: () => Promise<Profile>;
   onDone: () => Promise<void>;
 }) {
+  const router = useRouter();
   const primary =
     profile.primaryRole ?? profile.roles[0] ?? ("DANCER" as AccountRole);
   const availableChannels = CHANNEL_OPTIONS[primary];
@@ -571,6 +577,7 @@ function FirstCampaignStep({
   );
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [activating, setActivating] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [recap, setRecap] = useState<{
     toCount?: number;
@@ -578,7 +585,29 @@ function FirstCampaignStep({
     role: AccountRole;
   } | null>(null);
 
+  // Derived connection state
+  const currentAccount = profile.accounts.find(
+    (a) => ROLE_TO_PLATFORM[primary] === a.platform,
+  );
+  const hasTelegram = (currentAccount?.telegramChannels?.length ?? 0) > 0;
+  const hasSms = !!currentAccount?.smsNumber?.id && !currentAccount?.smsNumber?.releasedAt;
+
   const quickTemplates = getQuickTemplatesForRole(primary);
+
+  useEffect(() => {
+    // Restore message from localStorage
+    const saved = localStorage.getItem("onboarding:draftMessage");
+    if (saved) {
+      setMessage(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Persist message to localStorage
+    if (message) {
+      localStorage.setItem("onboarding:draftMessage", message);
+    }
+  }, [message]);
 
   useEffect(() => {
     setChannel(CHANNEL_OPTIONS[primary][0]);
@@ -700,11 +729,35 @@ function FirstCampaignStep({
     }
   };
 
+  const activateSms = async () => {
+    const accountId = accountIds[primary];
+    if (!accountId) return;
+
+    setActivating(true);
+    setStatus(null);
+    try {
+      const res = await fetch("/api/sms/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creatorAccountId: accountId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Activation failed");
+      await onProfileRefresh();
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Failed to activate SMS");
+    } finally {
+      setActivating(false);
+    }
+  };
+
   function recapAudienceLabel(role: AccountRole) {
     if (role === "DANCER") return "your VIP regulars";
     if (role === "CLUB") return "your club VIPs";
     return "your top online fans";
   }
+
+  const channelButtons = CHANNEL_OPTIONS[primary];
 
   if (recap) {
     return (
@@ -797,23 +850,122 @@ function FirstCampaignStep({
     );
   }
 
-  const channelButtons = CHANNEL_OPTIONS[primary];
+  const renderConnectionGate = () => {
+    if (channel === "TELEGRAM" && !hasTelegram) {
+      return (
+        <div className="space-y-6 rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-8 text-center shadow-xl">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-fuchsia-500/20 text-fuchsia-300">
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              />
+            </svg>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-bold text-white">
+              Connect Telegram to send messages
+            </h3>
+            <p className="text-sm text-slate-400">
+              RepurpX uses Telegram channels to broadcast messages to your fans
+              and VIPs. You’ll connect once, then send campaigns anytime.
+            </p>
+          </div>
+          <div className="flex flex-col items-center gap-4">
+            <button
+              type="button"
+              onClick={() =>
+                router.push(
+                  "/dashboard/settings?tab=telegram&returnTo=onboarding",
+                )
+              }
+              className="w-full max-w-xs rounded-full bg-fuchsia-500 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-fuchsia-500/20 hover:bg-fuchsia-600 sm:w-auto"
+            >
+              Connect Telegram
+              <span className="ml-2 text-[10px] font-normal opacity-80">
+                (~30 seconds)
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={onDone}
+              className="text-xs text-slate-500 hover:text-slate-300"
+            >
+              Skip for now
+              <span className="block mt-1 text-[10px] opacity-60">
+                You can finish setup later from Settings.
+              </span>
+            </button>
+          </div>
+        </div>
+      );
+    }
 
-  return (
-    <section className="space-y-6 rounded-2xl border border-white/10 bg-black/40 p-6 shadow-xl shadow-black/40">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-50">
-          Send your first campaign.
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Pick a channel, keep it conversational, and click send. You can refine
-          templates later.
-        </p>
-      </div>
+    if (channel === "SMS" && !hasSms) {
+      return (
+        <div className="space-y-6 rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-8 text-center shadow-xl">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-fuchsia-500/20 text-fuchsia-300">
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+              />
+            </svg>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-bold text-white">
+              Activate SMS to text your VIPs
+            </h3>
+            <p className="text-sm text-slate-400">
+              We’ll automatically provision a phone number for you so you can
+              text regulars, VIPs, and at-risk guests directly.
+            </p>
+          </div>
+          <div className="flex flex-col items-center gap-4">
+            <button
+              type="button"
+              disabled={activating}
+              onClick={activateSms}
+              className="w-full max-w-xs rounded-full bg-fuchsia-500 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-fuchsia-500/20 hover:bg-fuchsia-600 disabled:opacity-50 sm:w-auto"
+            >
+              {activating ? "Activating..." : "Enable SMS texting"}
+            </button>
+            <p className="text-[10px] text-slate-500">
+              Uses included credits if available. No charges without
+              confirmation.
+            </p>
+            <button
+              type="button"
+              onClick={onDone}
+              className="text-xs text-slate-500 hover:text-slate-300"
+            >
+              Skip for now
+              <span className="block mt-1 text-[10px] opacity-60">
+                You can finish setup later from Settings.
+              </span>
+            </button>
+          </div>
+        </div>
+      );
+    }
 
+    return (
       <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <div className="space-y-4 rounded-xl bg-white/5 p-4">
-          {/* Channel pills */}
           <div className="flex flex-wrap gap-2">
             {channelButtons.map((option) => (
               <button
@@ -832,7 +984,6 @@ function FirstCampaignStep({
             ))}
           </div>
 
-          {/* Quick templates row */}
           {quickTemplates.length > 0 && (
             <div className="space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -850,10 +1001,6 @@ function FirstCampaignStep({
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-slate-500">
-                Tap a template to drop it in, then edit it so it sounds like
-                you.
-              </p>
             </div>
           )}
 
@@ -866,12 +1013,8 @@ function FirstCampaignStep({
               onChange={(event) => setMessage(event.target.value)}
               rows={5}
               className="w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none ring-0 focus:border-fuchsia-500"
-              placeholder="Type what you’d normally send your whales…"
+              placeholder="Type what you’d normally send..."
             />
-            <p className="text-[10px] text-slate-500">
-              Start from a template or write your own. You’re talking to real
-              people, so keep it in your voice.
-            </p>
           </div>
         </div>
 
@@ -883,31 +1026,55 @@ function FirstCampaignStep({
             {message || "Your message will appear here."}
           </div>
           <p className="text-[11px] text-slate-500">
-            RepurpX respects your plan limits. If you’re out of credits we’ll
-            let you know before sending.
+            RepurpX respects your plan limits. We&apos;ll check credits before
+            sending.
           </p>
         </div>
       </div>
+    );
+  };
 
-      {status && <p className="text-xs text-slate-300">{status}</p>}
-
-      <div className="flex justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-full border border-white/20 px-4 py-2 text-xs text-slate-200 hover:bg-white/5"
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          disabled={sending}
-          onClick={sendCampaign}
-          className="rounded-full bg-white px-5 py-2 text-xs font-semibold text-black shadow hover:bg-slate-100 disabled:opacity-60"
-        >
-          {sending ? "Sending…" : "Send & finish onboarding"}
-        </button>
+  return (
+    <section className="space-y-6 rounded-2xl border border-white/10 bg-black/40 p-6 shadow-xl shadow-black/40">
+      <div>
+        <h1 className="text-xl font-semibold text-slate-50">
+          Send your first campaign.
+        </h1>
+        <p className="mt-1 text-sm text-slate-400">
+          Pick a channel, keep it conversational, and click send. You can refine
+          templates later.
+        </p>
       </div>
+
+      {renderConnectionGate()}
+
+      {status && (
+        <div className="rounded-lg bg-rose-500/10 p-3 text-xs text-rose-300">
+          {status}
+        </div>
+      )}
+
+      {(!channel ||
+        (channel === "TELEGRAM" && hasTelegram) ||
+        (channel === "SMS" && hasSms)) && (
+          <div className="flex justify-between">
+            <button
+              type="button"
+              onClick={onBack}
+              className="rounded-full border border-white/20 px-4 py-2 text-xs text-slate-200 hover:bg-white/5"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              disabled={sending}
+              onClick={sendCampaign}
+              className="rounded-full bg-white px-5 py-2 text-xs font-semibold text-black shadow hover:bg-slate-100 disabled:opacity-60"
+            >
+              {sending ? "Sending…" : "Send & finish onboarding"}
+            </button>
+          </div>
+        )}
     </section>
   );
 }
