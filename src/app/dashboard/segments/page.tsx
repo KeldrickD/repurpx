@@ -38,6 +38,15 @@ interface SegmentResponse {
   }>;
 }
 
+const RECOMMENDATION_MAP: Record<SegmentKey, string> = {
+  WHALE: "Best for premium drops",
+  MID: "Nurture spenders",
+  LOW: "Increase conversion",
+  NEW: "Welcome gifts",
+  EXPIRING: "Prevent churn",
+  GHOST: "Win-back opportunity",
+};
+
 const ICON_MAP: Record<SegmentKey, ComponentType<{ className?: string }>> = {
   WHALE: DollarSign,
   MID: Users,
@@ -70,7 +79,7 @@ export default function SegmentsPage() {
       .then((json: SegmentResponse) => {
         if (!mounted) return;
         setData(json);
-        setSelectedKey((prev) => prev ?? json.segments[0]?.key ?? null);
+        // Do not auto-select first segment
         setError(null);
       })
       .catch((err) => {
@@ -129,15 +138,11 @@ export default function SegmentsPage() {
       <OnboardingNudge role="CREATOR" stats={stats} />
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-wide text-silver/60">
-            Segments
-          </p>
           <h1 className="font-heading text-2xl font-semibold text-white">
-            Auto + custom slices
+            Segments — choose who to message
           </h1>
           <p className="text-sm text-silver/70">
-            RepurpX keeps every fan sorted so you always know who needs
-            attention.
+            Every fan is auto-sorted so you always know who to talk to next.
           </p>
         </div>
         <Button variant="secondary" size="sm" disabled>
@@ -183,23 +188,33 @@ export default function SegmentsPage() {
               <h3 className="font-heading text-lg font-semibold">
                 {segment.label}
               </h3>
-              <p className="mt-1 text-xs text-silver/70">
+              <p className="mt-1 text-xs font-medium text-magenta/80">
+                {RECOMMENDATION_MAP[segment.key]}
+              </p>
+              <p className="mt-1 text-[11px] text-silver/50">
                 {segment.threshold ?? segment.description}
               </p>
               <div className="mt-4 flex gap-2">
-                <Button
-                  variant={isSelected ? "primary" : "ghost"}
-                  size="sm"
+                <Link
+                  href={`/dashboard/campaigns/new?segment=${segment.key}`}
                   className="flex-1"
+                >
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="w-full"
+                    disabled={!segment.count}
+                  >
+                    Message
+                  </Button>
+                </Link>
+                <Button
+                  variant={isSelected ? "secondary" : "ghost"}
+                  size="sm"
                   onClick={() => setSelectedKey(segment.key)}
                 >
                   {isSelected ? "Viewing" : "View fans"}
                 </Button>
-                <Link href={`/dashboard/campaigns/new?segment=${segment.key}`}>
-                  <Button variant="secondary" size="sm" disabled={!segment.count}>
-                    Message
-                  </Button>
-                </Link>
               </div>
             </Card>
           );
@@ -207,63 +222,77 @@ export default function SegmentsPage() {
       </div>
 
       <Card>
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="font-heading text-xl font-semibold text-white">
-              {selectedSegment?.label ?? "Segment fans"}
+        {!selectedKey ? (
+          <div className="py-12 text-center">
+            <Users className="mx-auto mb-4 h-12 w-12 text-white/10" />
+            <h2 className="text-lg font-semibold text-white">
+              Select a segment above to see fans
             </h2>
-            <p className="text-sm text-silver/70">
-              {selectedSegment?.description ??
-                "Select a segment to preview matching fans."}
+            <p className="text-sm text-silver/60">
+              Choose a group to see individual fan details and history.
             </p>
           </div>
-          <div className="text-right text-xs text-silver/60">
-            {selectedSegment?.count ?? 0} of {data?.totalFans ?? 0} fans
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-border text-xs uppercase tracking-wide text-silver/60">
-              <tr>
-                <th className="py-3 font-medium">Fan</th>
-                <th className="py-3 font-medium">Lifetime spend</th>
-                <th className="py-3 font-medium">Last message</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {selectedSegment?.fans?.length ? (
-                selectedSegment.fans.map((fan) => (
-                  <tr key={fan.id} className="hover:bg-white/5">
-                    <td className="py-4">
-                      <p className="font-medium text-white">{fan.name}</p>
-                      {fan.username && (
-                        <p className="text-xs text-silver/70">
-                          @{fan.username}
-                        </p>
-                      )}
-                    </td>
-                    <td className="py-4 font-mono text-silver">
-                      ${fan.lifetimeSpend.toFixed(2)}
-                    </td>
-                    <td className="py-4 text-silver/80">
-                      {fan.lastMessageAt
-                        ? new Date(fan.lastMessageAt).toLocaleDateString()
-                        : "—"}
-                    </td>
+        ) : (
+          <>
+            <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="font-heading text-xl font-semibold text-white">
+                  {selectedSegment?.label ?? "Segment fans"}
+                </h2>
+                <p className="text-sm text-silver/70">
+                  {selectedSegment?.description ??
+                    "Select a segment to preview matching fans."}
+                </p>
+              </div>
+              <div className="text-right text-xs text-silver/60">
+                {selectedSegment?.count ?? 0} of {data?.totalFans ?? 0} fans
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-border text-xs uppercase tracking-wide text-silver/60">
+                  <tr>
+                    <th className="py-3 font-medium">Fan</th>
+                    <th className="py-3 font-medium">Lifetime spend</th>
+                    <th className="py-3 font-medium">Last message</th>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={3} className="py-6 text-center text-silver/60">
-                    {loading
-                      ? "Loading fans..."
-                      : "No fans match this segment yet."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {selectedSegment?.fans?.length ? (
+                    selectedSegment.fans.map((fan) => (
+                      <tr key={fan.id} className="hover:bg-white/5">
+                        <td className="py-4">
+                          <p className="font-medium text-white">{fan.name}</p>
+                          {fan.username && (
+                            <p className="text-xs text-silver/70">
+                              @{fan.username}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-4 font-mono text-silver">
+                          ${fan.lifetimeSpend.toFixed(2)}
+                        </td>
+                        <td className="py-4 text-silver/80">
+                          {fan.lastMessageAt
+                            ? new Date(fan.lastMessageAt).toLocaleDateString()
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="py-6 text-center text-silver/60">
+                        {loading
+                          ? "Loading fans..."
+                          : "Fans will appear here as soon as data is synced or imported."}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </Card>
     </div>
   );

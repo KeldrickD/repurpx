@@ -194,39 +194,15 @@ function getContentForRole(
     };
   }
 
-  const whales = stats?.whales ?? 0;
-  const ghosts = stats?.ghosts ?? 0;
-  const smsUsed = stats?.smsUsed;
-  const smsLimit = stats?.smsLimit;
-
-  const bullets: string[] = [];
-
-  if (whales || ghosts) {
-    bullets.push(
-      `You’ve got ${whales} whales and ${ghosts} ghosts sitting in your fanbase right now.`,
-    );
-  } else {
-    bullets.push("Even a small list of fans can turn into consistent paydays.");
-  }
-
-  bullets.push(
-    "Creators who consistently ping whales and win back ghosts make way more than those who just post and hope.",
-  );
-
-  if (smsUsed !== undefined && smsLimit !== undefined) {
-    bullets.push(`You’ve used ${smsUsed}/${smsLimit} SMS on your current plan.`);
-  }
-
   return {
-    title: "You’ve messaged your whales. Next up: win-backs.",
-    body:
-      "Your fan segments are ready. Instead of blasting everyone the same way, hit whales and ghosts with different offers.",
-    bullets,
-    primaryCtaLabel: "Open Segments",
-    primaryCtaAction: () => router.push("/dashboard/segments"),
-    secondaryCtaLabel: "Create win-back campaign",
-    secondaryCtaAction: () =>
+    title: "You’re ready to message smarter",
+    body: "Your segments are live. The fastest wins come from:",
+    bullets: ["Whales → premium offers", "Ghosts → win-back messages"],
+    primaryCtaLabel: "Create win-back campaign",
+    primaryCtaAction: () =>
       router.push("/dashboard/campaigns/new?segment=GHOSTS"),
+    secondaryCtaLabel: "Open whales",
+    secondaryCtaAction: () => router.push("/dashboard/segments?segment=WHALE"),
   };
 }
 
